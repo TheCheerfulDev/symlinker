@@ -1,0 +1,5 @@
+.idea
+*.iml
+symlinker
+symlinker.yaml
+dotfiles
