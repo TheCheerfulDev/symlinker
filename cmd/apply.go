@@ -10,13 +10,14 @@ import (
 // applyCmd represents the apply command
 var applyCmd = &cobra.Command{
 	Use:   "apply",
-	Short: "A brief description of your command",
-	Long: `A longer description that spans multiple lines and likely contains examples
-and usage of using your command. For example:
+	Short: "Applies the symlinks defined in the configuration file",
+	Long: `Applies the symlinks defined in the configuration file.
+If the source doe not exist, the link is skipped.
+If the target exists and is a symlink, it is verified.
+If the target exists and is not a symlink, a warning is printed and the link is skipped.
 
-Cobra is a CLI library for Go that empowers applications.
-This application is a tool to generate the needed files
-to quickly create a Cobra application.`,
+Note: The target will NEVER be overwritten or deleted by this command.
+`,
 	RunE: func(cmd *cobra.Command, args []string) error {
 		symlinks, err := getSymlinks()
 		if err != nil {
