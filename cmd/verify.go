@@ -95,7 +95,7 @@ func isSymlink(info os.FileInfo) bool {
 }
 
 func getSymlinks() (entity.Symlinks, error) {
-	file, err := os.ReadFile("symlinker.yaml")
+	file, err := os.ReadFile(symlinkerFile)
 	if err != nil {
 		fmt.Println("Error reading file:", err)
 		return entity.Symlinks{}, err
@@ -125,14 +125,4 @@ func getSymlinks() (entity.Symlinks, error) {
 
 func init() {
 	rootCmd.AddCommand(verifyCmd)
-
-	// Here you will define your flags and configuration settings.
-
-	// Cobra supports Persistent Flags which will work for this command
-	// and all subcommands, e.g.:
-	// verifyCmd.PersistentFlags().String("foo", "", "A help for foo")
-
-	// Cobra supports local flags which will only run when this command
-	// is called directly, e.g.:
-	// verifyCmd.Flags().BoolP("toggle", "t", false, "Help message for toggle")
 }
