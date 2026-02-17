@@ -12,42 +12,40 @@ import (
 // initCmd represents the init command
 var initCmd = &cobra.Command{
 	Use:   "init",
-	Short: "A brief description of your command",
-	Long: `A longer description that spans multiple lines and likely contains examples
-and usage of using your command. For example:
-
-Cobra is a CLI library for Go that empowers applications.
-This application is a tool to generate the needed files
-to quickly create a Cobra application.`,
-	Run: func(cmd *cobra.Command, args []string) {
-		// check if symlinkerFile exists
-		_, err := os.Stat(symlinkerFile)
-		if os.IsNotExist(err) {
-			defaultContent := entity.Symlinks{
-				Links: []entity.Symlink{
-					{
-						Source: "/path/to/source",
-						Target: "/path/to/target",
-					},
-				},
+	Short: "Creates a default symlinker.yaml in the current directory",
+	Long:  "Creates a starter symlinker.yaml configuration file if it doesn't already exist.",
+	RunE: func(cmd *cobra.Command, args []string) error {
+		fi, err := os.Stat(symlinkerFile)
+		if err == nil {
+			if fi.IsDir() {
+				return fmt.Errorf("%s exists and is a directory", symlinkerFile)
 			}
-
-			out, err := yaml.Marshal(defaultContent)
-			if err != nil {
-				panic(err)
-			}
-
-			err = os.WriteFile(symlinkerFile, out, 0644)
-			if err != nil {
-				panic(err)
-			}
-			fmt.Printf("%s created successfully\n", symlinkerFile)
-			return
-		} else if err != nil {
-			panic(err)
+			cmd.Printf("%s already exists\n", symlinkerFile)
+			return nil
+		}
+		if !os.IsNotExist(err) {
+			return fmt.Errorf("stat %s: %w", symlinkerFile, err)
 		}
 
-		fmt.Printf("%s already exists\n", symlinkerFile)
+		defaultContent := entity.Symlinks{
+			Links: []entity.Symlink{
+				{
+					Source: "/path/to/source",
+					Target: "/path/to/target",
+				},
+			},
+		}
+
+		out, err := yaml.Marshal(defaultContent)
+		if err != nil {
+			return fmt.Errorf("marshal default config: %w", err)
+		}
+
+		if err := os.WriteFile(symlinkerFile, out, 0o644); err != nil {
+			return fmt.Errorf("write %s: %w", symlinkerFile, err)
+		}
+		cmd.Printf("%s created successfully\n", symlinkerFile)
+		return nil
 	},
 }
 

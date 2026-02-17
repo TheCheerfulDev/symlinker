@@ -3,11 +3,6 @@ package cmd
 import (
 	"fmt"
 	"os"
-	"path/filepath"
-	"strings"
-	"symlinker/entity"
-
-	"gopkg.in/yaml.v3"
 
 	"github.com/spf13/cobra"
 )
@@ -18,109 +13,55 @@ var verifyCmd = &cobra.Command{
 	Short: "Verifies the symlinks defined in the configuration file",
 	Long:  `Verifies the symlinks defined in the configuration file.`,
 	RunE: func(cmd *cobra.Command, args []string) error {
-
-		// read the yaml file from this directory, names symlinker.yaml
-
 		symlinks, err := getSymlinks()
 		if err != nil {
 			return err
 		}
+
 		for _, link := range symlinks.Links {
-
-			sourcePath := expandPath(link.Source)
-			targetPath := expandPath(link.Target)
-			// check if the link exists
-			fmt.Println("Checking link:", link.Source, "->", link.Target)
-			_, err := os.Lstat(sourcePath)
-			if os.IsNotExist(err) {
-				fmt.Printf("  Source does not exist: %s\n", link.Source)
-			} else if err != nil {
-				fmt.Println("  Error checking link:", err)
-				return err
+			sourcePath, err := expandPath(link.Source)
+			if err != nil {
+				return fmt.Errorf("expand source %q: %w", link.Source, err)
+			}
+			targetPath, err := expandPath(link.Target)
+			if err != nil {
+				return fmt.Errorf("expand target %q: %w", link.Target, err)
 			}
 
-			target, err := os.Lstat(targetPath)
-			if os.IsNotExist(err) {
-				fmt.Printf("  Target does not exist: %s\n", link.Target)
-				continue
-			} else if err != nil {
-				fmt.Println("  Error checking link:", err)
-				return err
-			}
+			cmd.Printf("Checking link: %s -> %s\n", link.Source, link.Target)
 
-			// check if the target is a symlink
-			if isSymlink(target) {
-				// read the symlink
-				actualTarget, err := os.Readlink(targetPath)
-				if err != nil {
-					fmt.Println("  Error reading symlink:", err)
-					return err
+			if _, err := os.Lstat(sourcePath); err != nil {
+				if os.IsNotExist(err) {
+					cmd.Printf("  Source does not exist: %s\n", link.Source)
+				} else {
+					return fmt.Errorf("stat source %q: %w", sourcePath, err)
 				}
-				// compare the actual target with the expected target
-				if actualTarget != sourcePath {
-					fmt.Printf("  Target mismatch: expected %s, got %s\n", sourcePath, actualTarget)
+			}
+
+			targetInfo, err := os.Lstat(targetPath)
+			if err != nil {
+				if os.IsNotExist(err) {
+					cmd.Printf("  Target does not exist: %s\n", link.Target)
+					continue
+				}
+				return fmt.Errorf("stat target %q: %w", targetPath, err)
+			}
+
+			if isSymlink(targetInfo) {
+				ok, stored, resolved, err := symlinkPointsTo(targetPath, sourcePath)
+				if err != nil {
+					return fmt.Errorf("read symlink %q: %w", targetPath, err)
+				}
+				if !ok {
+					cmd.Printf("  Target mismatch: expected %s, got %s (resolved %s)\n", sourcePath, stored, resolved)
 				}
 			} else {
-				fmt.Printf("  Target is not a symlink: %s\n", link.Target)
+				cmd.Printf("  Target is not a symlink: %s\n", link.Target)
 			}
 		}
 
-		// if we reach here, all links checked
 		return nil
 	},
-}
-
-func expandPath(path string) string {
-	if strings.HasPrefix(path, "~") {
-		home, err := os.UserHomeDir()
-		if err != nil {
-			return ""
-		}
-		return filepath.Join(home, strings.TrimPrefix(path, "~"))
-	}
-
-	// handle relative paths
-	if !filepath.IsAbs(path) {
-		cwd, err := os.Getwd()
-		if err != nil {
-			return ""
-		}
-		return filepath.Join(cwd, path)
-	}
-	return path
-}
-
-func isSymlink(info os.FileInfo) bool {
-	return info.Mode()&os.ModeSymlink != 0
-}
-
-func getSymlinks() (entity.Symlinks, error) {
-	file, err := os.ReadFile(symlinkerFile)
-	if err != nil {
-		fmt.Println("Error reading file:", err)
-		return entity.Symlinks{}, err
-	}
-
-	// parse the yaml file
-
-	symlinks := entity.Symlinks{}
-
-	err = yaml.Unmarshal(file, &symlinks)
-	if err != nil {
-		fmt.Println("Error parsing yaml:", err)
-		return entity.Symlinks{}, err
-	}
-
-	// check if there are any duplicate targets
-	targets := make(map[string]bool)
-	for _, link := range symlinks.Links {
-		if targets[link.Target] {
-			return entity.Symlinks{}, fmt.Errorf("duplicate target found: %s", link.Target)
-		}
-		targets[link.Target] = true
-	}
-
-	return symlinks, nil
 }
 
 func init() {

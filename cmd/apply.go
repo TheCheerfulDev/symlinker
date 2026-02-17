@@ -23,53 +23,52 @@ Note: The target will NEVER be overwritten or deleted by this command.
 		if err != nil {
 			return err
 		}
+
 		for _, link := range symlinks.Links {
-
-			sourcePath := expandPath(link.Source)
-			targetPath := expandPath(link.Target)
-			// check if the link exists
-			fmt.Println("Creating link:", link.Source, "->", link.Target)
-			_, err := os.Lstat(sourcePath)
-			if os.IsNotExist(err) {
-				fmt.Printf("  Skipping because source does not exist: %s\n", link.Source)
-				continue
-			} else if err != nil {
-				fmt.Println("  Error creating link:", err)
-				return err
+			sourcePath, err := expandPath(link.Source)
+			if err != nil {
+				return fmt.Errorf("expand source %q: %w", link.Source, err)
+			}
+			targetPath, err := expandPath(link.Target)
+			if err != nil {
+				return fmt.Errorf("expand target %q: %w", link.Target, err)
 			}
 
-			target, err := os.Lstat(targetPath)
-			if os.IsNotExist(err) {
-				err := os.Symlink(sourcePath, targetPath)
-				if err != nil {
-					fmt.Println("  Error creating symlink:", err)
-					return err
+			cmd.Printf("Creating link: %s -> %s\n", link.Source, link.Target)
+
+			if _, err := os.Lstat(sourcePath); err != nil {
+				if os.IsNotExist(err) {
+					cmd.Printf("  Skipping because source does not exist: %s\n", link.Source)
+					continue
 				}
-				fmt.Println("  Symlink created")
-				continue
-			} else if err != nil {
-				fmt.Println("  Error creating symlink:", err)
-				return err
+				return fmt.Errorf("stat source %q: %w", sourcePath, err)
 			}
 
-			// check if the target is a symlink
-			if isSymlink(target) {
-				// read the symlink
-				actualTarget, err := os.Readlink(targetPath)
-				if err != nil {
-					fmt.Println("  Error reading symlink:", err)
-					return err
+			targetInfo, err := os.Lstat(targetPath)
+			if err != nil {
+				if os.IsNotExist(err) {
+					if err := os.Symlink(sourcePath, targetPath); err != nil {
+						return fmt.Errorf("create symlink %q -> %q: %w", targetPath, sourcePath, err)
+					}
+					cmd.Println("  Symlink created")
+					continue
 				}
-				// compare the actual target with the expected target
-				if actualTarget != sourcePath {
-					fmt.Printf("  Target mismatch: expected %s, got %s\n", sourcePath, actualTarget)
+				return fmt.Errorf("stat target %q: %w", targetPath, err)
+			}
+
+			if isSymlink(targetInfo) {
+				ok, stored, resolved, err := symlinkPointsTo(targetPath, sourcePath)
+				if err != nil {
+					return fmt.Errorf("read symlink %q: %w", targetPath, err)
+				}
+				if !ok {
+					cmd.Printf("  Target mismatch: expected %s, got %s (resolved %s)\n", sourcePath, stored, resolved)
 				}
 			} else {
-				fmt.Printf("  Target is not a symlink: %s\n", link.Target)
+				cmd.Printf("  Target is not a symlink: %s\n", link.Target)
 			}
 		}
 
-		// end of RunE
 		return nil
 	},
 }
