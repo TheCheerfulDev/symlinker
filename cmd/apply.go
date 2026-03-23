@@ -3,6 +3,7 @@ package cmd
 import (
 	"fmt"
 	"os"
+	"path/filepath"
 
 	"github.com/spf13/cobra"
 )
@@ -47,6 +48,16 @@ Note: The target will NEVER be overwritten or deleted by this command.
 			targetInfo, err := os.Lstat(targetPath)
 			if err != nil {
 				if os.IsNotExist(err) {
+
+					if _, err := os.Lstat(filepath.Dir(targetPath)); err != nil && os.IsNotExist(err) {
+						err := os.MkdirAll(filepath.Dir(targetPath), 0755)
+						if err != nil {
+							return fmt.Errorf("mkdir %q: %w", filepath.Dir(targetPath), err)
+						}
+					} else {
+						return fmt.Errorf("lstat target subdirectory %q: %w", targetPath, err)
+					}
+
 					if err := os.Symlink(sourcePath, targetPath); err != nil {
 						return fmt.Errorf("create symlink %q -> %q: %w", targetPath, sourcePath, err)
 					}

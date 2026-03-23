@@ -1,6 +1,7 @@
 # symlinker
 
-**symlinker** is a command-line tool for managing symbolic links (symlinks) on your filesystem using a simple YAML configuration file. It allows you to create, verify, and delete symlinks in a safe and repeatable way.
+**symlinker** is a command-line tool for managing symbolic links (symlinks) on your filesystem using a simple YAML
+configuration file. It allows you to create, verify, and delete symlinks in a safe and repeatable way.
 
 ## Features
 
@@ -24,8 +25,8 @@ Manual download:
 - Visit the releases page and download the appropriate archive for your platform:
   https://github.com/TheCheerfulDev/symlinker/releases/latest
 - Downloads available for:
-  - macOS: amd64, arm64
-  - Linux: amd64, arm64
+    - macOS: amd64, arm64
+    - Linux: amd64, arm64
 - Extract the archive and place the `symlinker` binary on your PATH. For example:
   ```sh
   tar -xzf symlinker_<version>_<os>_<arch>.tar.gz
@@ -64,6 +65,7 @@ symlinker apply
 - Skips links if the source does not exist.
 - Verifies existing symlinks.
 - Never overwrites or deletes existing files.
+- Creates directories as needed for targets.
 
 ### 3. Verify symlinks
 
