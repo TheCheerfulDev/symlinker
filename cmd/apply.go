@@ -49,13 +49,14 @@ Note: The target will NEVER be overwritten or deleted by this command.
 			if err != nil {
 				if os.IsNotExist(err) {
 
-					if _, err := os.Lstat(filepath.Dir(targetPath)); err != nil && os.IsNotExist(err) {
-						err := os.MkdirAll(filepath.Dir(targetPath), 0755)
-						if err != nil {
-							return fmt.Errorf("mkdir %q: %w", filepath.Dir(targetPath), err)
+					if _, err := os.Lstat(filepath.Dir(targetPath)); err != nil {
+						if os.IsNotExist(err) {
+							if err := os.MkdirAll(filepath.Dir(targetPath), 0755); err != nil {
+								return fmt.Errorf("mkdir %q: %w", filepath.Dir(targetPath), err)
+							}
+						} else {
+							return fmt.Errorf("lstat target subdirectory %q: %w", filepath.Dir(targetPath), err)
 						}
-					} else {
-						return fmt.Errorf("lstat target subdirectory %q: %w", targetPath, err)
 					}
 
 					if err := os.Symlink(sourcePath, targetPath); err != nil {

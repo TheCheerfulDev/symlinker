@@ -14,7 +14,7 @@ var rootCmd = &cobra.Command{
 	Short: "A brief description of your application",
 	Long: `SYmlinker is a tool to manage symlinks based on a configuration file.
 You can use it to create, delete, and verify symlinks defined in a YAML configuration file.`,
-	Version: "1.0.0",
+	Version: "1.0.1",
 }
 
 // Execute adds all child commands to the root command and sets flags appropriately.
